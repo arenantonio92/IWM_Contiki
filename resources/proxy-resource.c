@@ -2,17 +2,16 @@
 
 
 /* --------- MOTES DISCOVERING and REGISTRATION -------- */
-static void res_put_handler(void *request, void *response, 
-	uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+
 	
 RESOURCE(proxy_resource,
 		"title=\"Fake resource, to warn proxy of new motes\";rt=\"ProxyResource\"",
 		NULL,
-		res_put_handler,
-		res_put_handler,
+		res_post_handler,
+		res_post_handler,
 		NULL);
 		
-static void res_put_handler(void *request, void *response, 
+static void res_post_handler(void *request, void *response, 
 	uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	size_t len = 0;
@@ -35,6 +34,8 @@ static void res_put_handler(void *request, void *response,
 		}
 		p.ID = seq++;
 		register_obs(&mote_addr, &p);
+		p.is_fresh = 0;
+		init_resource(&p);
 		list_add(res_list, &p);
 	}
 	
@@ -49,6 +50,19 @@ register_obs(uip_ip6addr_t *addr, struct proxying_res *p)
 {
 	p->obs = coap_obs_request_registration(addr, REMOTE_PORT,
                         OBS_RESOURCE_URI, notification_callback, NULL);
+}
+
+static void init_resource(struct proxying_res *p)
+{
+	
+	static char title[32];
+	sprintf(title, "title=\"Resource M%02d,\";rt=\"Text\"",p->ID);
+	
+	p->res = { NULL, NULL, IS_OBSERVABLE, title, 
+		/* da fare la get */
+		get_handler, NULL, NULL, NULL, { .trigger = event_handler} };
+		
+	rest_activate_resource(&p->res, "example");
 }
 
 static void
@@ -106,6 +120,8 @@ static void update_payload(const char *addr, char *payload)
 		uip_debug_ipaddr_sprint(temp, &(s->obs->addr));
 		if(strcmp(temp,addr)){
 			strcpy(s->payload, (char*)payload);
+			s->is_fresh = 1;
+			s->res.trigger();
 			return;
 		}
 	}
@@ -113,7 +129,8 @@ static void update_payload(const char *addr, char *payload)
 				
 			
 
-static void remove_object_list(const char *addr){
+static void remove_object_list(const char *addr)
+{
 	struct proxying_res *s;
 	char temp[50];
 	for(s = list_head(res_list); s!=NULL; s = list_item_next(s))
@@ -127,14 +144,24 @@ static void remove_object_list(const char *addr){
 	}
 }
 
-static void remove_observation(coap_observee_t *obs, const char *addr){
+static void remove_observation(coap_observee_t *obs, const char *addr)
+{
 	coap_obs_remove_observee(obs);
 	remove_object_list(addr);
 }
 	
 /* ------------------ SERVER HANDLER ------------------------------ */
 
-
+static void event_handler()
+{
+	struct proxying_res *s;
+	for(s = list_head(res_list); s!=NULL && s->is_fresh==0; s = list_item_next(s));
+	
+	s->is_fresh = 0;
+	REST.notify_subscribers(&s->res);
+}
+	
+			
 
 
 
