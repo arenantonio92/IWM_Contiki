@@ -9,9 +9,12 @@
 #include "stdlib.h"
 
 #define MAX_MOTES 128
-#define MAX_PAYLOAD 50
+#define MAX_PAYLOAD 30
+#define MAX_AGE 600
 #define REMOTE_PORT     UIP_HTONS(COAP_DEFAULT_PORT)
 #define OBS_RESOURCE_URI "dumpster" 
+
+#define MYSTRCPY(str,lit) strcpy(str=malloc(strlen(lit)+1),lit)
 
 /* --------- PROXYING RESOURCES ------------------------ */
 
@@ -20,14 +23,17 @@ static uint8_t initialized = 0;
 
 extern resource_t proxy_resource;
 
-struct proxying_res{
+ struct proxying_res{
 	struct proxying_res *next;
 	uint16_t ID;
 	char payload[MAX_PAYLOAD];
 	resource_t res;
 	uint8_t is_fresh;
 	coap_observee_t *obs;	
-};
+} ;
+
+typedef struct proxying_res proxying_res;
+
 
 LIST(res_list);
 
@@ -39,7 +45,7 @@ static void res_post_handler(void *request, void *response,
 
 //Register a new observation
 static void 
-register_obs(uip_ip6addr_t *addr, struct proxying_res *p);
+register_obs(uip_ip6addr_t *addr, proxying_res *p);
 
 //Remove a specific observation
 static void remove_observation(coap_observee_t *obs, const char *addr);
@@ -56,11 +62,13 @@ static void update_payload(const char *addr, char *payload);
 static void remove_object_list(const char *addr);
 
 //Initialize a new resource for Java Cliente
-static void init_resource(struct proxying_res *p);
+static void init_resource(proxying_res *p);
 
 //Event resource handler
-
 static void event_handler(void);
+
+//Get Handler
+static void res_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 	
 
 

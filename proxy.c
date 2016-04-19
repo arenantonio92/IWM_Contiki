@@ -38,9 +38,6 @@ static uip_ipaddr_t *set_global_address(void)
   uip_debug_ipaddr_print(&ipaddr);
   printf("\n");
   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
-  printf("Second part addr: ");
-  uip_debug_ipaddr_print(&ipaddr);
-  printf("\n");
   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
   printf("Final addr: ");
   uip_debug_ipaddr_print(&ipaddr);
