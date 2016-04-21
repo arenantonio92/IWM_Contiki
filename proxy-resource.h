@@ -2,6 +2,7 @@
 #include "contiki-net.h"
 #include "uip-debug.h"
 #include "string.h"
+#include "stdlib.h"
 #include "rest-engine.h"
 #include "er-coap-engine.h"
 #include "er-coap.h"
@@ -9,8 +10,8 @@
 #include "lib/memb.h"
 
 #define MAX_MOTES 			3
-#define MAX_PAYLOAD 		30
-#define MAX_STRING_LEN		35
+#define MAX_PAYLOAD 		25
+#define MAX_STRING_LEN		25
 #define MAX_AGE 			600
 #define REMOTE_PORT     	UIP_HTONS(COAP_DEFAULT_PORT)
 #define OBS_RESOURCE_URI 	"dumpster" 
@@ -38,7 +39,9 @@ struct req{
 struct proxying_res{
 	struct proxying_res *next;
 	uint16_t ID;
-	char payload[MAX_PAYLOAD];
+	float volume;
+	float latitude;
+	float longitude;
 	resource_t res;
 	coap_observee_t *obs;	
 	struct string *attr;

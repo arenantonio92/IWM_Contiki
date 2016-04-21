@@ -8,14 +8,29 @@ static void res_post_handler(void *request, void *response,
 {
 	size_t len = 0;
 	const char *ip = NULL;
+	const char *lat = NULL;
+	const char *lon = NULL;
 	uip_ip6addr_t mote_addr;
 	int success = 1;
 	
 	if((len = REST.get_post_variable(request,"IP",&ip))){
-		 printf("New mote with ip: %s\n",ip);
+		printf("New mote with ip: %s\n",ip);
 		if(uiplib_ip6addrconv(ip, &mote_addr)==0)
 			success = 0;
 	}
+	else
+		success = 0;
+	
+	/*if((len = REST.get_post_variable(request,"LAT",&lat)))
+		 printf("Latitude: %s\n",lat);
+	else
+		success = 0;
+	
+	if((len = REST.get_post_variable(request,"LON",&lon)))
+		 printf("Longitude: %s\n",lon);
+	else 
+		success = 0;
+	*/
 	
 	if(success){
 		printf("New observation relation with mote %01x\n",seq);
@@ -42,6 +57,9 @@ static void res_post_handler(void *request, void *response,
 			p->attr  = memb_alloc(&string_allocator);
 			p->uri   = memb_alloc(&uri_allocator);
 			
+			p->latitude = 25.30;//atol(lat);
+			p->longitude = 15.20;//atol(lon);
+			
 			register_obs(&mote_addr, p);
 			init_resource(p);
 			list_add(res_list, p);
@@ -64,7 +82,7 @@ register_obs(uip_ip6addr_t *addr, proxying_res *p)
 static void init_resource(proxying_res *p)
 {
 	
-	sprintf(p->attr->str, "title=\"Resource M%02d\";rt=\"Text\"",p->ID);
+	sprintf(p->attr->str, "title=\"R_M%02d\";rt=\"Text\"",p->ID);
 	
 	printf("Initizalizing Resource for mote %02d\n", p->ID);
 	
@@ -79,7 +97,7 @@ static void init_resource(proxying_res *p)
 	p->res.trigger 			= event_handler;
 
 
-	sprintf(p->uri->str, "Res_M%02d",p->ID);
+	sprintf(p->uri->str, "M%02d",p->ID);
 	
 	printf("Activating Resource for mote %02d\n", p->ID);
 	rest_activate_resource(&p->res, p->uri->str);
@@ -143,14 +161,15 @@ static void update_payload(uip_ip6addr_t *addr, char *payload)
 		
 		
 		if(uip_ipaddr_cmp(addr, &(s->obs->addr))){
-			strcpy(s->payload,payload);
+			
+			s->volume = atol(&payload[11]);
+			
 			r = (struct req *)memb_alloc(&request_allocator);
 			r->ID = s->ID;
 			
 			printf("Update payload for mote %02d\n", s->ID);
 			
 			list_push(request_list, r);		
-			//s->res.trigger();
 			
 			printf("Notify Subscribers for mote %02d\n", s->ID);
 
@@ -210,19 +229,23 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 	int length;
 	
 	
-	REST.get_url(request, &url);
+	coap_get_header_uri_path(request, &url);
+	
 	
 	if(url == NULL){
 		r = list_pop(request_list);	
 		printf("I'm in the GET Handler for mote ID: %d\n",r->ID);
 		for(s = list_head(res_list); s!=NULL&&s->ID!=r->ID; s = list_item_next(s))
 		;
-			printf("Uri: %s\n",s->uri);
 			
-			char temp[50];
-			sprintf(temp,"ID: %u ", s->ID);
-			strcat(temp, s->payload);
+			printf("OBSERVING NOTIFY: Uri: %s\n",s->uri->str);
+			
+			char temp[80];
+			
+			//sprintf(temp, "{\"e\":[{\"v\":\"%03u\",\"u\":\"%\"}, {\"v\":\"%03u\",\"u\":\"lat\"}, {\"v\":\"%03u\",\"u\":\"lon\"}]}", (int)s->volume, (int)s->latitude, (int)s->longitude);
+			sprintf(temp, "{'Dumpster': {'Volume':%03u, 'Lat':%03u, 'Long':%03u, 'ID':%03u}}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
 			length = strlen(temp);
+			
 			memcpy(buffer, temp, length);
 				
 			memb_free(&request_allocator, (void *)r);
@@ -233,19 +256,28 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 			REST.set_response_payload(response, buffer, length);
 	}	
 	else{
+		char temp[80];
 		
+		strcpy(temp, url);
+		temp[4] = '\0';
+		
+		printf("STANDARD GET: Uri: %s\n",url);
 		for(s = list_head(res_list); s!=NULL; s = list_item_next(s)){
-			if(strcmp(url,s->uri)){
-				char temp[50];
-				sprintf(temp,"ID: %u ", s->ID);
-				strcat(temp, s->payload);
+			if(strcmp(temp,s->uri->str)){
+				
+				//sprintf(temp, "{\"e\":[{\"v\":\"%03u\",\"u\":\"%\"}, {\"v\":\"%03u\",\"u\":\"lat\"}, {\"v\":\"%03u\",\"u\":\"lon\"}]}", (int)s->volume, (int)s->latitude, (int)s->longitude);
+				sprintf(temp, "{'Dumpster': {'Volume':%03u, 'Lat':%03u, 'Long':%03u, 'ID':%03u}}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
+				
 				length = strlen(temp);
+				
 				memcpy(buffer, temp, length);
 				REST.set_header_content_type(response, REST.type.APPLICATION_JSON); 
 				REST.set_header_max_age(response, MAX_AGE);
 				REST.set_header_etag(response, (uint8_t *) &length, 1);
 				REST.set_response_payload(response, buffer, length);
+				continue;
 			}
 		}	
 	}
+	
 }
