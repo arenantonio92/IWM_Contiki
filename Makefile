@@ -2,21 +2,10 @@ CONTIKI_PROJECT = proxy
 
 all: $(CONTIKI_PROJECT)
 
-REST_RESOURCES_DIR = ./resources
-ifndef TARGET
-REST_RESOURCES_FILES = $(notdir $(shell find $(REST_RESOURCES_DIR) -name '*.c'))
-else
-ifeq ($(TARGET), native)
-REST_RESOURCES_FILES = $(notdir $(shell find $(REST_RESOURCES_DIR) -name '*.c'))
-else
-REST_RESOURCES_FILES = $(notdir $(shell find $(REST_RESOURCES_DIR) -name '*.c' ! -name 'res-plugtest*'))
-endif
-endif
-
-PROJECTDIRS += $(REST_RESOURCES_DIR)
-PROJECT_SOURCEFILES += $(REST_RESOURCES_FILES)
+PROJECT_SOURCEFILES += proxy-resource.c
 
 SMALL=1
+UIP_CONF_IPV6=1
 
 CONTIKI=/home/user/contiki
 
@@ -24,10 +13,10 @@ APPS += er-coap
 APPS += rest-engine
 APPS += servreg-hack
 
-UIP_CONF_IPV6=1
 
 CFLAGS += -DUIP_CONF_IPV6_RPL
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
 
 CONTIKI_WITH_IPV6 = 1
 include $(CONTIKI)/Makefile.include

@@ -1,5 +1,5 @@
-obj_z1/proxy-resource.o: resources/proxy-resource.c \
- resources/proxy-resource.h /home/user/contiki/core/./contiki.h \
+obj_z1/proxy-resource.o: proxy-resource.c proxy-resource.h \
+ /home/user/contiki/core/./contiki.h \
  /home/user/contiki/core/./contiki-version.h \
  /home/user/contiki/platform/z1/./contiki-conf.h \
  /home/user/contiki/platform/z1/./platform-conf.h \
@@ -114,8 +114,8 @@ obj_z1/proxy-resource.o: resources/proxy-resource.c \
  /home/user/contiki/apps/er-coap/er-coap-separate.h \
  /home/user/contiki/apps/er-coap/er-coap-observe-client.h \
  /home/user/contiki/apps/er-coap/er-coap.h
-resources/proxy-resource.c :
- resources/proxy-resource.h /home/user/contiki/core/./contiki.h :
+proxy-resource.c proxy-resource.h :
+ /home/user/contiki/core/./contiki.h :
  /home/user/contiki/core/./contiki-version.h :
  /home/user/contiki/platform/z1/./contiki-conf.h :
  /home/user/contiki/platform/z1/./platform-conf.h :

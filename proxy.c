@@ -1,15 +1,13 @@
 #include "contiki.h"
 #include "lib/random.h"
-#include "sys/ctimer.h"
-#include "sys/etimer.h"
+//#include "sys/ctimer.h"
+//#include "sys/etimer.h"
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
 
 #include "rest-engine.h"
 
-
-#include "simple-udp.h"
 #include "servreg-hack.h"
 
 #include "net/rpl/rpl.h"
@@ -20,7 +18,7 @@
 /* SERVREG SERVICE_ID  */
 #define SERVICE_ID 190
 
-extern resource_t proxy_resource;
+extern resource_t proxy_res;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(proxy_server_process, "Proxy Server process");
@@ -92,7 +90,8 @@ PROCESS_THREAD(proxy_server_process, ev, data)
 	
 	rest_init_engine();
 	
-	rest_activate_resource(&proxy_resource, "proxy_resource");
+	printf("Activating proxy resource\n");
+	rest_activate_resource(&proxy_res, "proxy_resource");
 
 
 	while(1){
