@@ -9,7 +9,7 @@
 #include "lib/list.h"
 #include "lib/memb.h"
 
-#define MAX_MOTES 			3
+#define MAX_MOTES 			4
 #define MAX_PAYLOAD 		25
 #define MAX_STRING_LEN		25
 #define MAX_AGE 			600
@@ -55,7 +55,7 @@ typedef struct proxying_res proxying_res;
 //Memory management allocator definition for proxy resources
 
 MEMB(memb_res_allocator, proxying_res, MAX_MOTES);
-MEMB(request_allocator, struct req, MAX_MOTES);
+MEMB(request_allocator, struct req, 2*MAX_MOTES);
 MEMB(string_allocator, struct string, MAX_MOTES);
 MEMB(uri_allocator, struct string, MAX_MOTES);
 

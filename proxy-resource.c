@@ -53,7 +53,7 @@ static void res_post_handler(void *request, void *response,
 			success = 0;
 		}
 		else{
-			p->ID 	 = seq++;
+			p->ID 	 = seq;
 			p->attr  = memb_alloc(&string_allocator);
 			p->uri   = memb_alloc(&uri_allocator);
 			
@@ -63,6 +63,7 @@ static void res_post_handler(void *request, void *response,
 			register_obs(&mote_addr, p);
 			init_resource(p);
 			list_add(res_list, p);
+			seq++;
 		}
 	}
 	
@@ -211,6 +212,8 @@ static void event_handler()
 {
 	proxying_res *s;
 	struct req *r;
+	
+	
 	printf("TRIGGER\n");
 	r = list_head(request_list);
 	
@@ -223,49 +226,45 @@ static void event_handler()
 	
 static void res_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	const char *url;
+	const char *url = NULL;
 	proxying_res *s;
 	struct req *r;
 	int length;
 	
+	char temp[80];
 	
 	coap_get_header_uri_path(request, &url);
+	//REST.get_url(request, &url);
 	
 	
 	if(url == NULL){
 		r = list_pop(request_list);	
-		printf("I'm in the GET Handler for mote ID: %d\n",r->ID);
 		for(s = list_head(res_list); s!=NULL&&s->ID!=r->ID; s = list_item_next(s))
 		;
 			
-			printf("OBSERVING NOTIFY: Uri: %s\n",s->uri->str);
+		printf("OBSERVING NOTIFY: Uri: %s\n",s->uri->str);
 			
-			char temp[80];
+		//sprintf(temp, "{\"e\":[{\"v\":\"%03u\",\"u\":\"%\"}, {\"v\":\"%03u\",\"u\":\"lat\"}, {\"v\":\"%03u\",\"u\":\"lon\"}],\"bn\":\"%03u%\"}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
+		sprintf(temp, "{'Dumpster': {'Volume':%03u, 'Lat':%03u, 'Long':%03u, 'ID':%03u}}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
+		length = strlen(temp);
 			
-			//sprintf(temp, "{\"e\":[{\"v\":\"%03u\",\"u\":\"%\"}, {\"v\":\"%03u\",\"u\":\"lat\"}, {\"v\":\"%03u\",\"u\":\"lon\"}]}", (int)s->volume, (int)s->latitude, (int)s->longitude);
-			sprintf(temp, "{'Dumpster': {'Volume':%03u, 'Lat':%03u, 'Long':%03u, 'ID':%03u}}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
-			length = strlen(temp);
-			
-			memcpy(buffer, temp, length);
+		memcpy(buffer, temp, length);
 				
-			memb_free(&request_allocator, (void *)r);
+		memb_free(&request_allocator, (void *)r);
 
-			REST.set_header_content_type(response, REST.type.APPLICATION_JSON); 
-			REST.set_header_max_age(response, MAX_AGE);
-			REST.set_header_etag(response, (uint8_t *) &length, 1);
-			REST.set_response_payload(response, buffer, length);
+		REST.set_header_content_type(response, REST.type.APPLICATION_JSON); 
+		REST.set_header_max_age(response, MAX_AGE);
+		REST.set_header_etag(response, (uint8_t *) &length, 1);
+		REST.set_response_payload(response, buffer, length);
 	}	
 	else{
-		char temp[80];
 		
-		strcpy(temp, url);
-		temp[4] = '\0';
-		
-		printf("STANDARD GET: Uri: %s\n",url);
+		strcpy(temp, url);		
+		printf("STANDARD GET: Uri: %s\n", temp);
 		for(s = list_head(res_list); s!=NULL; s = list_item_next(s)){
 			if(strcmp(temp,s->uri->str)){
 				
-				//sprintf(temp, "{\"e\":[{\"v\":\"%03u\",\"u\":\"%\"}, {\"v\":\"%03u\",\"u\":\"lat\"}, {\"v\":\"%03u\",\"u\":\"lon\"}]}", (int)s->volume, (int)s->latitude, (int)s->longitude);
+				//sprintf(temp, "{\"e\":[{\"v\":\"%03u\",\"u\":\"%\"}, {\"v\":\"%03u\",\"u\":\"lat\"}, {\"v\":\"%03u\",\"u\":\"lon\"}],\"bn\":\"%03u%\"}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
 				sprintf(temp, "{'Dumpster': {'Volume':%03u, 'Lat':%03u, 'Long':%03u, 'ID':%03u}}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
 				
 				length = strlen(temp);
@@ -275,7 +274,6 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 				REST.set_header_max_age(response, MAX_AGE);
 				REST.set_header_etag(response, (uint8_t *) &length, 1);
 				REST.set_response_payload(response, buffer, length);
-				continue;
 			}
 		}	
 	}

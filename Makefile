@@ -18,6 +18,7 @@ CFLAGS += -DUIP_CONF_IPV6_RPL
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 
+CFLAGS+= -DRPL_CONF_DIO_REDUNDANCY=1
 CONTIKI_WITH_IPV6 = 1
 include $(CONTIKI)/Makefile.include
 
