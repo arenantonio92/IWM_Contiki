@@ -2,6 +2,7 @@
 #include "contiki-net.h"
 #include "uip-debug.h"
 #include "string.h"
+#include <ctype.h>
 #include "stdlib.h"
 #include "rest-engine.h"
 #include "er-coap-engine.h"
@@ -9,9 +10,8 @@
 #include "lib/list.h"
 #include "lib/memb.h"
 
-#define MAX_MOTES 			4
-#define MAX_PAYLOAD 		25
-#define MAX_STRING_LEN		25
+#define MAX_MOTES 			3
+#define MAX_STRING_LEN		30
 #define MAX_AGE 			600
 #define REMOTE_PORT     	UIP_HTONS(COAP_DEFAULT_PORT)
 #define OBS_RESOURCE_URI 	"dumpster" 
@@ -28,7 +28,14 @@ LIST(res_list);
 LIST(request_list);
 
 struct string{
+	struct string *next;
 	char str[MAX_STRING_LEN];
+};
+
+
+struct my_float{
+	int i_part;
+	long int f_part;
 };
 
 struct req{
@@ -39,9 +46,9 @@ struct req{
 struct proxying_res{
 	struct proxying_res *next;
 	uint16_t ID;
-	float volume;
-	float latitude;
-	float longitude;
+	struct my_float volume;
+	struct my_float latitude;
+	struct my_float longitude;
 	resource_t res;
 	coap_observee_t *obs;	
 	struct string *attr;
@@ -55,7 +62,7 @@ typedef struct proxying_res proxying_res;
 //Memory management allocator definition for proxy resources
 
 MEMB(memb_res_allocator, proxying_res, MAX_MOTES);
-MEMB(request_allocator, struct req, 2*MAX_MOTES);
+MEMB(request_allocator, struct req, MAX_MOTES);
 MEMB(string_allocator, struct string, MAX_MOTES);
 MEMB(uri_allocator, struct string, MAX_MOTES);
 
@@ -100,7 +107,4 @@ static void event_handler();
 
 //Get Handler
 static void res_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-	
-
-
 

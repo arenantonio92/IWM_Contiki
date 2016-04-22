@@ -7,36 +7,38 @@ static void res_post_handler(void *request, void *response,
 	uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	size_t len = 0;
+	const uint8_t *payload = NULL;
 	const char *ip = NULL;
-	const char *lat = NULL;
-	const char *lon = NULL;
+	const char *i_lat = NULL;
+	const char *f_lat = NULL;
+	const char *i_lon = NULL;
+	const char *f_lon = NULL;
 	uip_ip6addr_t mote_addr;
 	int success = 1;
 	
-	if((len = REST.get_post_variable(request,"IP",&ip))){
-		printf("New mote with ip: %s\n",ip);
-		if(uiplib_ip6addrconv(ip, &mote_addr)==0)
+	if(len = REST.get_request_payload(request, &payload)){
+		
+		ip =  strstr(payload, ":'");
+		printf("New mote with ip: ");
+		if(uiplib_ip6addrconv(ip+2, &mote_addr)==0)
 			success = 0;
+		uip_debug_ipaddr_print(&mote_addr);
+		printf("\n");
+		
+		i_lat = strstr(ip+1, ":'");
+		f_lat = strstr(i_lat+1, ".");
+		
+		i_lon = strstr(f_lat+1,":'");
+		f_lon = strstr(i_lon+1,".");
+		
 	}
-	else
-		success = 0;
-	
-	/*if((len = REST.get_post_variable(request,"LAT",&lat)))
-		 printf("Latitude: %s\n",lat);
-	else
-		success = 0;
-	
-	if((len = REST.get_post_variable(request,"LON",&lon)))
-		 printf("Longitude: %s\n",lon);
-	else 
-		success = 0;
-	*/
 	
 	if(success){
 		printf("New observation relation with mote %01x\n",seq);
 		proxying_res *p;
 		
 		if(initialized == 0){
+			
 			memb_init(&memb_res_allocator);
 			memb_init(&request_allocator);
 			memb_init(&string_allocator);
@@ -57,8 +59,13 @@ static void res_post_handler(void *request, void *response,
 			p->attr  = memb_alloc(&string_allocator);
 			p->uri   = memb_alloc(&uri_allocator);
 			
-			p->latitude = 25.30;//atol(lat);
-			p->longitude = 15.20;//atol(lon);
+			p->latitude.i_part = atoi(i_lat+2);
+			p->latitude.f_part = atol(f_lat+1);
+			
+			p->longitude.i_part = atoi(i_lon+2);
+			p->longitude.f_part = atol(f_lon+1);
+			
+			printf("lat:%03d.%07ld, long:%03d.%07ld\n", p->latitude.i_part, p->latitude.f_part, p->longitude.i_part, p->longitude.f_part);
 			
 			register_obs(&mote_addr, p);
 			init_resource(p);
@@ -85,7 +92,7 @@ static void init_resource(proxying_res *p)
 	
 	sprintf(p->attr->str, "title=\"R_M%02d\";rt=\"Text\"",p->ID);
 	
-	printf("Initizalizing Resource for mote %02d\n", p->ID);
+	//printf("Initizalizing Resource for mote %02d\n", p->ID);
 	
 	p->res.next 			= NULL;
 	p->res.url 				= NULL;
@@ -98,9 +105,9 @@ static void init_resource(proxying_res *p)
 	p->res.trigger 			= event_handler;
 
 
-	sprintf(p->uri->str, "M%02d",p->ID);
+	sprintf(p->uri->str, "M%02u",p->ID);
 	
-	printf("Activating Resource for mote %02d\n", p->ID);
+	//printf("Activating Resource for mote %02d\n", p->ID);
 	rest_activate_resource(&p->res, p->uri->str);
 }
 
@@ -139,14 +146,14 @@ notification_callback(coap_observee_t *obs, void *notification,
 		break;
 	  case ERROR_RESPONSE_CODE:
 		printf("ERROR_RESPONSE_CODE: %*s\n", len, (char *)payload);
-		remove_object_list(addr);
+		remove_observation(obs, addr);
 		obs = NULL;
 		break;
 	  case NO_REPLY_FROM_SERVER:
 		 printf("NO_REPLY_FROM_SERVER: "
 			   "removing observe registration with token %x%x\n",
 			   obs->token[0], obs->token[1]);
-		remove_object_list(addr);
+		remove_observation(obs, addr);
 		obs = NULL;
 		break;
   }
@@ -163,16 +170,23 @@ static void update_payload(uip_ip6addr_t *addr, char *payload)
 		
 		if(uip_ipaddr_cmp(addr, &(s->obs->addr))){
 			
-			s->volume = atol(&payload[11]);
+			const char *i_vol = NULL;
+			const char *f_vol = NULL;
+			
+			i_vol = strstr(payload, ":'");
+			f_vol = strstr(i_vol+1, ".");
+			
+			s->volume.i_part = atoi(i_vol+2);
+			s->volume.f_part = atol(f_vol+1);
 			
 			r = (struct req *)memb_alloc(&request_allocator);
 			r->ID = s->ID;
 			
-			printf("Update payload for mote %02d\n", s->ID);
+			//printf("Update payload for mote %02d\n", s->ID);
 			
 			list_push(request_list, r);		
 			
-			printf("Notify Subscribers for mote %02d\n", s->ID);
+			//printf("Notify Subscribers for mote %02d\n", s->ID);
 
 			REST.notify_subscribers(&s->res);
 			return;
@@ -210,7 +224,7 @@ static void remove_observation(coap_observee_t *obs, const char *addr)
 
 static void event_handler()
 {
-	proxying_res *s;
+	/*proxying_res *s;
 	struct req *r;
 	
 	
@@ -221,7 +235,7 @@ static void event_handler()
 		;	
 	
 	printf("Notify Subscribers for mote %02d\n", s->ID);
-	REST.notify_subscribers(&s->res);
+	REST.notify_subscribers(&s->res);*/
 }
 	
 static void res_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -233,49 +247,46 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 	
 	char temp[80];
 	
-	coap_get_header_uri_path(request, &url);
+	int len = coap_get_header_uri_path(request, &url);
 	//REST.get_url(request, &url);
 	
 	
-	if(url == NULL){
+	if(len == 0){
 		r = list_pop(request_list);	
 		for(s = list_head(res_list); s!=NULL&&s->ID!=r->ID; s = list_item_next(s))
 		;
-			
+		
+		
 		printf("OBSERVING NOTIFY: Uri: %s\n",s->uri->str);
 			
-		//sprintf(temp, "{\"e\":[{\"v\":\"%03u\",\"u\":\"%\"}, {\"v\":\"%03u\",\"u\":\"lat\"}, {\"v\":\"%03u\",\"u\":\"lon\"}],\"bn\":\"%03u%\"}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
-		sprintf(temp, "{'Dumpster': {'Volume':%03u, 'Lat':%03u, 'Long':%03u, 'ID':%03u}}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
-		length = strlen(temp);
-			
-		memcpy(buffer, temp, length);
-				
-		memb_free(&request_allocator, (void *)r);
-
-		REST.set_header_content_type(response, REST.type.APPLICATION_JSON); 
-		REST.set_header_max_age(response, MAX_AGE);
-		REST.set_header_etag(response, (uint8_t *) &length, 1);
-		REST.set_response_payload(response, buffer, length);
+		//sprintf(temp, "{\"e\":[{\"v\":\"%03d\",\"u\":\"%\"}, {\"v\":\"%03d\",\"u\":\"lat\"}, {\"v\":\"%03d\",\"u\":\"lon\"}],\"bn\":\"%03d%\"}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
+		
 	}	
 	else{
+		char uri[4];
 		
-		strcpy(temp, url);		
-		printf("STANDARD GET: Uri: %s\n", temp);
+		memcpy(uri,url, 4);
+		uri[3] = '\0';
+
+		printf("STANDARD GET: Uri: %s\n", uri);
 		for(s = list_head(res_list); s!=NULL; s = list_item_next(s)){
-			if(strcmp(temp,s->uri->str)){
-				
-				//sprintf(temp, "{\"e\":[{\"v\":\"%03u\",\"u\":\"%\"}, {\"v\":\"%03u\",\"u\":\"lat\"}, {\"v\":\"%03u\",\"u\":\"lon\"}],\"bn\":\"%03u%\"}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
-				sprintf(temp, "{'Dumpster': {'Volume':%03u, 'Lat':%03u, 'Long':%03u, 'ID':%03u}}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
-				
-				length = strlen(temp);
-				
-				memcpy(buffer, temp, length);
-				REST.set_header_content_type(response, REST.type.APPLICATION_JSON); 
-				REST.set_header_max_age(response, MAX_AGE);
-				REST.set_header_etag(response, (uint8_t *) &length, 1);
-				REST.set_response_payload(response, buffer, length);
+			
+			if(strncmp(uri,s->uri->str,4)==0){
+				break;
+				//printf("%s == %s \n",uri,s->uri->str);
+				//sprintf(temp, "{\"e\":[{\"v\":\"%03d\",\"u\":\"%\"}, {\"v\":\"%03d\",\"u\":\"lat\"}, {\"v\":\"%03d\",\"u\":\"lon\"}],\"bn\":\"%03d%\"}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);	
 			}
 		}	
 	}
-	
+	sprintf(temp, "{'Dumpster': {'Volume':%d.%02ld, 'Lat':%03d.%07ld, 'Lon':%03d.%07ld', ID':%02u}}", s->volume.i_part, s->volume.f_part, s->latitude.i_part, s->latitude.f_part, s->longitude.i_part, s->longitude.f_part, s->ID);
+	length = strlen(temp);
+			
+	memcpy(buffer, temp, length);
+				
+	memb_free(&request_allocator, (void *)r);
+
+	REST.set_header_content_type(response, REST.type.APPLICATION_JSON); 
+	REST.set_header_max_age(response, MAX_AGE);
+	REST.set_header_etag(response, (uint8_t *) &length, 1);
+	REST.set_response_payload(response, buffer, length);
 }
