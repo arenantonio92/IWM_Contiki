@@ -18,12 +18,25 @@
 /* SERVREG SERVICE_ID  */
 #define SERVICE_ID 190
 
+#define RANDOM_MAX		 	65535
+#define A_CODE				65
+#define Z_CODE				90
+
 extern resource_t proxy_res;
+char proxy_name;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(proxy_server_process, "Proxy Server process");
 AUTOSTART_PROCESSES(&proxy_server_process);
 /*---------------------------------------------------------------------------*/
+
+unsigned int
+randr(unsigned int min, unsigned int max)
+{
+       double scaled = (double)random_rand()/RANDOM_MAX;
+
+       return (max - min +1)*scaled + min;
+}
 
 static uip_ipaddr_t *set_global_address(void)
 {
@@ -50,7 +63,9 @@ static uip_ipaddr_t *set_global_address(void)
       printf("\n");
     }
   }
-
+  
+  printf("initializing rand with seed: %u\n",(unsigned short)ipaddr.u16[7]);
+  random_init((unsigned short)ipaddr.u16[7]);
   return &ipaddr;
 }
 
@@ -83,6 +98,12 @@ PROCESS_THREAD(proxy_server_process, ev, data)
 	servreg_hack_init();
 	
 	ipaddr = set_global_address();
+	
+	unsigned int num = randr(A_CODE, Z_CODE);
+	//printf("NUM:%u\n",num);
+	
+	proxy_name = (char)num;
+	printf("Hi, I'm the proxy %c\n", proxy_name);
 
 	//create_rpl_dag(ipaddr);
 	

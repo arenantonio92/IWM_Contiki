@@ -9,12 +9,15 @@
 #include "er-coap.h"
 #include "lib/list.h"
 #include "lib/memb.h"
+#include "lib/random.h"
 
 #define MAX_MOTES 			3
 #define MAX_STRING_LEN		30
 #define MAX_AGE 			600
 #define REMOTE_PORT     	UIP_HTONS(COAP_DEFAULT_PORT)
 #define OBS_RESOURCE_URI 	"dumpster" 
+
+extern char proxy_name;
 
 
 /* --------- PROXYING RESOURCES ------------------------ */

@@ -47,6 +47,8 @@ static void res_post_handler(void *request, void *response,
 			list_init(request_list);
 			list_init(res_list);
 			initialized = 1;
+			
+			
 		}
 		
 		p = (proxying_res*)memb_alloc(&memb_res_allocator);
@@ -65,7 +67,8 @@ static void res_post_handler(void *request, void *response,
 			p->longitude.i_part = atoi(i_lon+2);
 			p->longitude.f_part = atol(f_lon+1);
 			
-			printf("lat:%03d.%07ld, long:%03d.%07ld\n", p->latitude.i_part, p->latitude.f_part, p->longitude.i_part, p->longitude.f_part);
+			//printf("lat:%03d.%07ld, long:%03d.%07ld\n", p->latitude.i_part, p->latitude.f_part, p->longitude.i_part, p->longitude.f_part);
+			
 			
 			register_obs(&mote_addr, p);
 			init_resource(p);
@@ -90,7 +93,7 @@ register_obs(uip_ip6addr_t *addr, proxying_res *p)
 static void init_resource(proxying_res *p)
 {
 	
-	sprintf(p->attr->str, "title=\"R_M%02d\";rt=\"Text\"",p->ID);
+	sprintf(p->attr->str, "title=\"%c%02d\";rt=\"Text\"", proxy_name, p->ID);
 	
 	//printf("Initizalizing Resource for mote %02d\n", p->ID);
 	
@@ -105,7 +108,7 @@ static void init_resource(proxying_res *p)
 	p->res.trigger 			= event_handler;
 
 
-	sprintf(p->uri->str, "M%02u",p->ID);
+	sprintf(p->uri->str, "%c%02u", proxy_name, p->ID);
 	
 	//printf("Activating Resource for mote %02d\n", p->ID);
 	rest_activate_resource(&p->res, p->uri->str);
@@ -278,7 +281,7 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 			}
 		}	
 	}
-	sprintf(temp, "{'Dumpster': {'Volume':%d.%02ld, 'Lat':%03d.%07ld, 'Lon':%03d.%07ld', ID':%02u}}", s->volume.i_part, s->volume.f_part, s->latitude.i_part, s->latitude.f_part, s->longitude.i_part, s->longitude.f_part, s->ID);
+	sprintf(temp, "{'Dumpster %s': {'Volume':'%d.%ld', 'Lat':'%d.%ld', 'Lon':'%d.%ld'}}", s->uri->str, s->volume.i_part, s->volume.f_part, s->latitude.i_part, s->latitude.f_part, s->longitude.i_part, s->longitude.f_part, s->ID);
 	length = strlen(temp);
 			
 	memcpy(buffer, temp, length);

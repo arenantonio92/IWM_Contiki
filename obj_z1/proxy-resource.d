@@ -113,7 +113,8 @@ obj_z1/proxy-resource.o: proxy-resource.c proxy-resource.h \
  /home/user/contiki/core/sys/stimer.h \
  /home/user/contiki/apps/er-coap/er-coap-separate.h \
  /home/user/contiki/apps/er-coap/er-coap-observe-client.h \
- /home/user/contiki/apps/er-coap/er-coap.h
+ /home/user/contiki/apps/er-coap/er-coap.h \
+ /home/user/contiki/core/./lib/random.h
 proxy-resource.c proxy-resource.h :
  /home/user/contiki/core/./contiki.h :
  /home/user/contiki/core/./contiki-version.h :
@@ -230,3 +231,4 @@ proxy-resource.c proxy-resource.h :
  /home/user/contiki/apps/er-coap/er-coap-separate.h :
  /home/user/contiki/apps/er-coap/er-coap-observe-client.h :
  /home/user/contiki/apps/er-coap/er-coap.h :
+ /home/user/contiki/core/./lib/random.h :
