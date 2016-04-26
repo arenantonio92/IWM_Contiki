@@ -45,14 +45,8 @@ static uip_ipaddr_t *set_global_address(void)
   uint8_t state;
 
   uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
-  printf("First part addr: ");
-  uip_debug_ipaddr_print(&ipaddr);
-  printf("\n");
   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
-  printf("Final addr: ");
-  uip_debug_ipaddr_print(&ipaddr);
-  printf("\n");
 
   printf("IPv6 addresses: ");
   for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
@@ -91,14 +85,11 @@ static void create_rpl_dag(uip_ipaddr_t *ipaddr)
 /* --------------------------------------------------------- */
 PROCESS_THREAD(proxy_server_process, ev, data)
 {
-	uip_ipaddr_t *ipaddr;
+	uip_ipaddr_t *my_ip;
 	
 	PROCESS_BEGIN();
 	
-	servreg_hack_init();
-	
-	ipaddr = set_global_address();
-	
+	my_ip = set_global_address();;
 	unsigned int num = randr(A_CODE, Z_CODE);
 	//printf("NUM:%u\n",num);
 	
@@ -107,13 +98,12 @@ PROCESS_THREAD(proxy_server_process, ev, data)
 
 	//create_rpl_dag(ipaddr);
 	
-	servreg_hack_register(SERVICE_ID, ipaddr);
-	
 	rest_init_engine();
 	
 	printf("Activating proxy resource\n");
 	rest_activate_resource(&proxy_res, "proxy_resource");
-
+	
+	servreg_hack_register(SERVICE_ID, my_ip);
 
 	while(1){
 		PROCESS_WAIT_EVENT();

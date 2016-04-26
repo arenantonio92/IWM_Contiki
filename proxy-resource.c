@@ -31,6 +31,16 @@ static void res_post_handler(void *request, void *response,
 		i_lon = strstr(f_lat+1,":'");
 		f_lon = strstr(i_lon+1,".");
 		
+		proxying_res *s;		
+		for(s = list_head(res_list); s!=NULL; s = list_item_next(s))
+		{			
+			if(uip_ipaddr_cmp(&mote_addr, &(s->obs->addr))){
+				uip_debug_ipaddr_print(&mote_addr);
+				REST.set_response_status(response, REST.status.CREATED);
+				printf(" already in database\n");
+			    return;
+			}	
+		}
 	}
 	
 	if(success){
@@ -43,9 +53,10 @@ static void res_post_handler(void *request, void *response,
 			memb_init(&request_allocator);
 			memb_init(&string_allocator);
 			memb_init(&uri_allocator);
-			
+					
 			list_init(request_list);
 			list_init(res_list);
+	
 			initialized = 1;
 			
 			
@@ -69,11 +80,12 @@ static void res_post_handler(void *request, void *response,
 			
 			//printf("lat:%03d.%07ld, long:%03d.%07ld\n", p->latitude.i_part, p->latitude.f_part, p->longitude.i_part, p->longitude.f_part);
 			
-			
-			register_obs(&mote_addr, p);
 			init_resource(p);
+			register_obs(&mote_addr, p);
 			list_add(res_list, p);
 			seq++;
+			
+			REST.set_response_status(response, REST.status.CREATED);
 		}
 	}
 	
@@ -176,7 +188,7 @@ static void update_payload(uip_ip6addr_t *addr, char *payload)
 			const char *i_vol = NULL;
 			const char *f_vol = NULL;
 			
-			i_vol = strstr(payload, ":'");
+			i_vol = strstr(payload+8, ":'");
 			f_vol = strstr(i_vol+1, ".");
 			
 			s->volume.i_part = atoi(i_vol+2);
@@ -281,7 +293,8 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 			}
 		}	
 	}
-	sprintf(temp, "{'Dumpster %s': {'Volume':'%d.%ld', 'Lat':'%d.%ld', 'Lon':'%d.%ld'}}", s->uri->str, s->volume.i_part, s->volume.f_part, s->latitude.i_part, s->latitude.f_part, s->longitude.i_part, s->longitude.f_part, s->ID);
+	sprintf(temp, "{'%s': {'Volume':'%d.%ld', 'Lat':'%d.%ld', 'Lon':'%d.%ld'}}", s->uri->str, s->volume.i_part, s->volume.f_part, s->latitude.i_part, s->latitude.f_part, s->longitude.i_part, s->longitude.f_part, s->ID);
+	
 	length = strlen(temp);
 			
 	memcpy(buffer, temp, length);

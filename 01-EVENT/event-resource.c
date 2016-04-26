@@ -5,81 +5,44 @@
 #include "contiki-net.h"
 #include "rest-engine.h"
 #include "lib/random.h"
+#include "servreg-hack.h"
 #include "dev/button-sensor.h"
+#include "er-coap-engine.h"
+
 //#include "dev/leds.h"
 
 #define RANDOM_MAX		 	65535
+#define SERVICE_ID      	190
 
-static int value;
-static int per_value;
+#define REMOTE_PORT     	UIP_HTONS(COAP_DEFAULT_PORT)
 
+static float vol = 0;
+static float aux=0;
+static uip_ipaddr_t *proxy_ipaddr;
+static float lat;
+static float lon;
 
-
-void res_event_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-void res_event_post_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-static void event_handler();
 
 void res_per_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 static void per_handler();
 
-EVENT_RESOURCE(resource_example, "title=\"Resource\";rt=\"Text\"", res_event_get_handler, 				res_event_post_handler, NULL, NULL, event_handler);
-PERIODIC_RESOURCE(resource_per, "title=\"Resource Periodic\";rt=\"Text\"", res_per_get_handler, 			NULL, NULL, NULL, 500*CLOCK_SECOND, per_handler);
 
-void
-res_event_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+PERIODIC_RESOURCE(resource_per, "title=\"Resource Periodic\";rt=\"Text\"", res_per_get_handler, NULL, NULL, NULL, 500*CLOCK_SECOND, per_handler);
 
-	/* Populat the buffer with the response payload*/
-	char message[20];
-	int length = 20;
-
-	sprintf(message, "VALUE:%03u", value);
-	length = strlen(message);
-	memcpy(buffer, message, length);
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN); 
-	REST.set_header_etag(response, (uint8_t *) &length, 1);
-	REST.set_response_payload(response, buffer, length);
-}
-
-void
-res_event_post_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-
-  int new_value, len;
-  const char *val = NULL;
-     
-  len=REST.get_post_variable(request, "value", &val);
-     
-  if( len > 0 ){
-     new_value = atoi(val);	
-     value = new_value;
-     REST.set_response_status(response, REST.status.CREATED);
-  } else {
-     REST.set_response_status(response, REST.status.BAD_REQUEST);
-  }
-}
-
-static void
-event_handler()
-{
-  /* Do the update triggered by the event here, e.g., sampling a sensor. */
-  ++value;
-
-    /* Notify the registered observers which will trigger the tget_handler to create the response. */
-    REST.notify_subscribers(&resource_example);
-  
-}
 
 void
 res_per_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 
 	/* Populat the buffer with the response payload*/
-	char message[35];
-	int length = 20;
+	char jstring[50];
+	int length = 40;
+	
+	int i_part = (int)vol;
+	long int f_part = (long int)100*(vol-i_part);
 //
-	sprintf(message, "{'e':{'v':'%03u','u':'%'}}", per_value);
-	length = strlen(message);
-	memcpy(buffer, message, length);
+	sprintf(jstring, "{'e':{'v':'%d.%ld','u':'%'}}", i_part, f_part);
+	length = strlen(jstring);
+	memcpy(buffer, jstring, length);
 
 	REST.set_header_content_type(response, REST.type.APPLICATION_JSON); 
 	REST.set_header_etag(response, (uint8_t *) &length, 1);
@@ -90,7 +53,24 @@ static void
 per_handler()
 {
   /* Do the update triggered by the event here, e.g., sampling a sensor. */
-  ++per_value;
+	int i_part;
+	long int f_part; 
+
+	aux = (float)random_rand()/RANDOM_MAX;
+	/* aux=[0,1]*/
+	
+	if(aux>0.1)
+		;
+	else 
+		if((vol+aux*100) > 100)
+			vol=100.0;
+	else 
+		vol+=aux*100;
+	
+	i_part = (int)vol;
+	f_part = (long int)100*(vol-i_part);
+	
+	//printf("Value: %d\n",per_value);
 
     /* Notify the registered observers which will trigger the tget_handler to create the response. */
     REST.notify_subscribers(&resource_per);
@@ -128,14 +108,23 @@ static uip_ipaddr_t *set_global_address(void)
   return &ipaddr;
 }
 
-unsigned int
-randr(unsigned int min, unsigned int max)
+float randr(unsigned int min, unsigned int max)
 {
-       double scaled = (double)random_rand()/RANDOM_MAX;
+       float scaled = (float)random_rand()/RANDOM_MAX;
 
        return (max - min +1)*scaled + min;
 }
 
+
+void client_chunk_handler(void *response)
+{
+  const uint8_t *chunk;
+
+  int len = coap_get_payload(response, &chunk);
+
+  printf("|%.*s", len, (char *)chunk);
+  
+}
 
 /*---------------------------------------------------------------------------*/
 PROCESS(server, "Server process");
@@ -144,25 +133,89 @@ AUTOSTART_PROCESSES(&server);
 PROCESS_THREAD(server, ev, data)
 {
   uip_ipaddr_t *ipaddr;
+  servreg_hack_item_t *item;
+  static struct etimer wait_timer;
+  unsigned int WAIT_INTERVAL;
+  static char ip[40];
+  
+  unsigned int period ;
+  
+  static coap_packet_t request[1];
 	
-	PROCESS_BEGIN();
+	
+	static char id_string[80];
+    int lat_i_part; 
+	long int lat_f_part; 
+    int lon_i_part; 
+	long int lon_f_part;
+	
+  PROCESS_BEGIN();
+  
+  ipaddr = set_global_address();	
+	
+	
+  servreg_hack_init();
+  
+  WAIT_INTERVAL = (unsigned int)randr(50,100)*CLOCK_SECOND;
+	
+	/* GET PROXY ADDR */ 
+	item = servreg_hack_list_head();
+	
+	while(item == NULL){
+		etimer_set(&wait_timer, WAIT_INTERVAL);
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&wait_timer));
+		
+		item = servreg_hack_list_head();
+	}
+	
+    for(;item != NULL;item = list_item_next(item)) {
+		if(servreg_hack_item_id(item) == SERVICE_ID){
+			printf("Id %d address ", servreg_hack_item_id(item));
+			uip_debug_ipaddr_print(servreg_hack_item_address(item));
+			proxy_ipaddr = servreg_hack_item_address(item);
+			printf("\n");
+			
+			//servreg_hack_register(servreg_hack_item_id(item), proxy_ipaddr);
+			break;
+		}
+     }
 
-	ipaddr = set_global_address();	
-
-  unsigned int period = randr(500,1500)*CLOCK_SECOND;  
+  period = randr(500,1500)*CLOCK_SECOND;  
 
   periodic_resource_per.period = period;
   
   SENSORS_ACTIVATE(button_sensor);
   rest_init_engine();
-  rest_activate_resource(&resource_example, "ev");
   rest_activate_resource(&resource_per, "dumpster");
+	
+	lat = randr(1,100);
+	lon = randr(1,100);	
+	uip_debug_ipaddr_sprint(ip,ipaddr);
+	
+   /*faccio la post al proxy per annunciare il mio arrivo*/
+	coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
+    coap_set_header_uri_path(request, "proxy_resource/");
+
+    lat_i_part = (int)lat;
+	lat_f_part = (long int)10000000*(lat -lat_i_part);
+    
+    lon_i_part = (int)lon;
+	lon_f_part = (long int)10000000*(lon -lon_i_part);
+    
+    printf("{'Ip':'[%s]', 'Lat':'%d.%ld', 'Lon':'%d.%ld'}\n ", ip, lat_i_part, lat_f_part, lon_i_part, lon_f_part);
+	sprintf(id_string, "{'Ip':'[%s]', 'Lat':'%d.%ld', 'Lon':'%d.%ld'} ", ip, lat_i_part, lat_f_part, lon_i_part, lon_f_part);
+    coap_set_payload(request, (uint8_t *)id_string, strlen(id_string));
+    
+    COAP_BLOCKING_REQUEST(proxy_ipaddr, REMOTE_PORT, request, client_chunk_handler);
+  
+  
+  
   while(1) {
     PROCESS_WAIT_EVENT();
     if(ev == sensors_event && data == &button_sensor){
     	//leds_toggle(LEDS_ALL);
     	printf("Button pressed\n");
-	resource_example.trigger();
+    	vol = 0;
     }
   }
   PROCESS_END();

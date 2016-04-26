@@ -8,7 +8,10 @@
 #undef COAP_MAX_OPEN_TRANSACTIONS
 #define COAP_MAX_OPEN_TRANSACTIONS   4
 
-/* Save some memory for the sky platform. */
+#undef UIP_CONF_BUFFER_SIZE
+#define UIP_CONF_BUFFER_SIZE           280
+
+/* Save some memory for the sky platform. 
 #undef NBR_TABLE_CONF_MAX_NEIGHBORS
 #define NBR_TABLE_CONF_MAX_NEIGHBORS     10
 #undef UIP_CONF_MAX_ROUTES
@@ -16,3 +19,4 @@
 #undef UIP_CONF_BUFFER_SIZE
 #define UIP_CONF_BUFFER_SIZE  280
 
+*/
