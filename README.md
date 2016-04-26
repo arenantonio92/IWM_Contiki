@@ -6,14 +6,16 @@ QUINDI,
 1) su cooja apri già la simulazione con il file project.csc
 2) su terminale vai nella cartella del progetto e digita make connect-router-cooja 
 3) avvia simulazione
-4) tramite firefox digita coap://[aaaa::c30c:0:0:2]:5683/proxy_resource
 
-5) In outgoing digita
-  {'Ip':'[aaaa::c30c:0:0:3]', 'Lat':'123.1234567', 'Lon':'123.1234567'} e poi clicca su POST in alto (dovrebbe darti 2.05 Content), su cooja dovresti vedere OBSERVE_OK
-  {'Ip':'[aaaa::c30c:0:0:4]', 'Lat':'123.1234567', 'Lon':'123.1234567'} e poi POST
-  {'Ip':'[aaaa::c30c:0:0:5]', 'Lat':'123.1234567', 'Lon':'123.1234567'} e poi POST
+Al momento ci sono due proxy con tre risorse ciascuno: 
+1- il proxy coap://[aaaa::c30c:0:0:6]/ ha le risorse che cominciano per lettera T
+2- il proxy coap://[aaaa::c30c:0:0:c]/ ha le risorse che cominciano per lettera H
   
-6) poi puoi aprire localhost/IWM o tramite Copper fare observing/get sulle risorse /M00, /M01, /M02 
+4) puoi aprire localhost/IWM (se hai settato le varie relazioni di observing) o tramite Copper fare observing/get sulle risorse 
+Es. coap://[aaaa::c30c:0:0:6]/T01
+
+5) se clicchi il pulsante su un mote qualunque, azzera il volume.
 
 ps se ti esce blockOutOfScope su copper, è quelli il bug............
+pps se vuoi aggiungere altri mote, ci sono già e sono quelli che hanno nome Mote (non MicheloMote).
   
