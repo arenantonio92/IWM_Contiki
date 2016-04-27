@@ -14,6 +14,12 @@
 #define RANDOM_MAX		 	65535
 #define SERVICE_ID      	190
 
+#define MIN_LAT		43.7
+#define MAX_LAT		43.72
+
+#define MIN_LON		10.387
+#define MAX_LON		10.482
+
 #define REMOTE_PORT     	UIP_HTONS(COAP_DEFAULT_PORT)
 
 static float vol = 0;
@@ -108,11 +114,11 @@ static uip_ipaddr_t *set_global_address(void)
   return &ipaddr;
 }
 
-float randr(unsigned int min, unsigned int max)
+float randr(float min, float max)
 {
        float scaled = (float)random_rand()/RANDOM_MAX;
 
-       return (max - min +1)*scaled + min;
+       return (max - min)*scaled + min;
 }
 
 
@@ -188,8 +194,8 @@ PROCESS_THREAD(server, ev, data)
   rest_init_engine();
   rest_activate_resource(&resource_per, "dumpster");
 	
-	lat = randr(1,100);
-	lon = randr(1,100);	
+	lat = randr(MIN_LAT, MAX_LAT);
+	lon = randr(MIN_LON, MAX_LON);	
 	uip_debug_ipaddr_sprint(ip,ipaddr);
 	
    /*faccio la post al proxy per annunciare il mio arrivo*/

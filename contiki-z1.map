@@ -3477,9 +3477,9 @@ LOAD /usr/local/msp430/bin/../lib/gcc/msp430/4.7.0/mcpu-430x/mmpy-16/msr20/mc20/
  .stab          0x0002ecec      0x1f8 contiki-z1.a(mac.o)
                                 0x504 (size before relaxing)
 
-.stabstr        0x00000000    0x21c4d
+.stabstr        0x00000000    0x21c2d
  *(.stabstr)
- .stabstr       0x00000000    0x21c4d proxy.co
+ .stabstr       0x00000000    0x21c2d proxy.co
 
 .stab.excl
  *(.stab.excl)
