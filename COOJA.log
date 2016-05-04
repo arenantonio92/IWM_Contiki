@@ -1,0 +1,16 @@
+[11:08:18 - main] [Cooja.java:1359] [INFO] - > Starting Cooja
+[11:08:18 - main] [Cooja.java:2865] [INFO] - External tools default settings: /external_tools_linux.config
+[11:08:18 - main] [Cooja.java:2895] [INFO] - External tools user settings: /home/user/.cooja.user.properties
+[11:08:19 - main] [Cooja.java:1365] [INFO] - > Creating simulation
+[11:08:24 - AWT-EventQueue-0] [Simulation.java:420] [INFO] - Simulation random seed: 123456
+[11:08:25 - main] [Visualizer.java:256] [INFO] - Registered external visualizer: org.contikios.cooja.plugins.skins.DGRMVisualizerSkin
+[11:08:25 - main] [Cooja.java:1375] [INFO] - > Creating mote type
+[11:08:25 - Thread-0] [Cooja.java:4146] [WARN] - Path is not portable: '/home/user/Desktop/IWM_Contiki/proxy.c
+[11:08:29 - AWT-EventQueue-0] [CompileContiki.java:140] [INFO] - > make proxy.cooja TARGET=cooja 
+[11:08:44 - main] [ContikiMoteType.java:406] [INFO] - Creating core communicator between Java class Lib1 and Contiki library '/home/user/Desktop/IWM_Contiki/obj_cooja/mtype425.cooja
+[11:08:46 - main] [ContikiMoteType.java:575] [INFO] - Parsed section at 0x2f020 ( 824 == 0x338 bytes)
+[11:08:46 - main] [ContikiMoteType.java:575] [INFO] - Parsed section at 0x2f360 ( 69704 == 0x11048 bytes)
+[11:08:46 - main] [ContikiMoteType.java:502] [INFO] - mtype425.cooja: offsetting Cooja mote address space: 0x71900000
+[11:08:46 - main] [ContikiMoteType.java:575] [INFO] - Parsed section at 0x7192f020 ( 824 == 0x338 bytes)
+[11:08:47 - main] [ContikiMoteType.java:575] [INFO] - Parsed section at 0x7192f360 ( 69704 == 0x11048 bytes)
+[11:08:47 - main] [Cooja.java:1392] [INFO] - > Adding motes

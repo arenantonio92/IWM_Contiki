@@ -3104,9 +3104,9 @@ LOAD /usr/local/msp430/bin/../lib/gcc/msp430/4.7.0/mcpu-430x/mmpy-16/msr20/mc20/
  .stab          0x0002ad50      0x654 contiki-z1.a(mac-sequence.o)
                                0x1794 (size before relaxing)
 
-.stabstr        0x00000000    0x1d5ed
+.stabstr        0x00000000    0x1d5f1
  *(.stabstr)
- .stabstr       0x00000000    0x1d5ed border-router.co
+ .stabstr       0x00000000    0x1d5f1 border-router.co
 
 .stab.excl
  *(.stab.excl)

@@ -1,7 +1,6 @@
 #include "contiki.h"
 #include "lib/random.h"
-//#include "sys/ctimer.h"
-//#include "sys/etimer.h"
+
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
@@ -10,13 +9,11 @@
 
 #include "servreg-hack.h"
 
-#include "net/rpl/rpl.h"
-
 #include <stdio.h>
 #include <string.h>
 
 /* SERVREG SERVICE_ID  */
-#define SERVICE_ID 190
+#define SERVICE_ID 			190
 
 #define RANDOM_MAX		 	65535
 #define A_CODE				65
@@ -35,7 +32,7 @@ randr(unsigned int min, unsigned int max)
 {
        double scaled = (double)random_rand()/RANDOM_MAX;
 
-       return (max - min +1)*scaled + min;
+       return (max - min)*scaled + min;
 }
 
 static uip_ipaddr_t *set_global_address(void)
@@ -63,24 +60,6 @@ static uip_ipaddr_t *set_global_address(void)
   return &ipaddr;
 }
 
-static void create_rpl_dag(uip_ipaddr_t *ipaddr)
-{
-  struct uip_ds6_addr *root_if;
-
-  root_if = uip_ds6_addr_lookup(ipaddr);
-  if(root_if != NULL) {
-    rpl_dag_t *dag;
-    uip_ipaddr_t prefix;
-    
-    rpl_set_root(RPL_DEFAULT_INSTANCE, ipaddr);
-    dag = rpl_get_any_dag();
-    uip_ip6addr(&prefix, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
-    rpl_set_prefix(dag, &prefix, 64);
-    PRINTF("created a new RPL dag\n");
-  } else {
-    PRINTF("failed to create a new RPL DAG\n");
-  }
-}
 
 /* --------------------------------------------------------- */
 PROCESS_THREAD(proxy_server_process, ev, data)
@@ -89,14 +68,12 @@ PROCESS_THREAD(proxy_server_process, ev, data)
 	
 	PROCESS_BEGIN();
 	
-	my_ip = set_global_address();;
+	my_ip = set_global_address();
+	
 	unsigned int num = randr(A_CODE, Z_CODE);
-	//printf("NUM:%u\n",num);
 	
 	proxy_name = (char)num;
 	printf("Hi, I'm the proxy %c\n", proxy_name);
-
-	//create_rpl_dag(ipaddr);
 	
 	rest_init_engine();
 	

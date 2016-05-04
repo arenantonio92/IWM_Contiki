@@ -13,12 +13,13 @@ static void res_post_handler(void *request, void *response,
 	const char *f_lat = NULL;
 	const char *i_lon = NULL;
 	const char *f_lon = NULL;
+	proxying_res *s;
 	uip_ip6addr_t mote_addr;
 	int success = 1;
 	
-	if(len = REST.get_request_payload(request, &payload)){
+	if((len = REST.get_request_payload(request, &payload))){
 		
-		ip =  strstr(payload, ":'");
+		ip =  strstr((const char*)payload, ":'");
 		printf("New mote with ip: ");
 		if(uiplib_ip6addrconv(ip+2, &mote_addr)==0)
 			success = 0;
@@ -30,8 +31,7 @@ static void res_post_handler(void *request, void *response,
 		
 		i_lon = strstr(f_lat+1,":'");
 		f_lon = strstr(i_lon+1,".");
-		
-		proxying_res *s;		
+			
 		for(s = list_head(res_list); s!=NULL; s = list_item_next(s))
 		{			
 			if(uip_ipaddr_cmp(&mote_addr, &(s->obs->addr))){
@@ -44,9 +44,8 @@ static void res_post_handler(void *request, void *response,
 	}
 	
 	if(success){
-		printf("New observation relation with mote %01x\n",seq);
-		proxying_res *p;
-		
+		printf("New observation relation with mote %01x\n",seq);	
+			
 		if(initialized == 0){
 			
 			memb_init(&memb_res_allocator);
@@ -59,30 +58,29 @@ static void res_post_handler(void *request, void *response,
 	
 			initialized = 1;
 			
-			
 		}
 		
-		p = (proxying_res*)memb_alloc(&memb_res_allocator);
-		if(p == NULL){
+		s = (proxying_res*)memb_alloc(&memb_res_allocator);
+		if(s == NULL){
 			printf("Memb error: no free objects\n");
 			success = 0;
 		}
 		else{
-			p->ID 	 = seq;
-			p->attr  = memb_alloc(&string_allocator);
-			p->uri   = memb_alloc(&uri_allocator);
+			s->ID 	 = seq;
+			s->attr  = memb_alloc(&string_allocator);
+			s->uri   = memb_alloc(&uri_allocator);
 			
-			p->latitude.i_part = atoi(i_lat+2);
-			p->latitude.f_part = atol(f_lat+1);
+			s->latitude.i_part = atoi(i_lat+2);
+			s->latitude.f_part = atol(f_lat+1);
 			
-			p->longitude.i_part = atoi(i_lon+2);
-			p->longitude.f_part = atol(f_lon+1);
+			s->longitude.i_part = atoi(i_lon+2);
+			s->longitude.f_part = atol(f_lon+1);
 			
 			//printf("lat:%03d.%07ld, long:%03d.%07ld\n", p->latitude.i_part, p->latitude.f_part, p->longitude.i_part, p->longitude.f_part);
 			
-			init_resource(p);
-			register_obs(&mote_addr, p);
-			list_add(res_list, p);
+			init_resource(s);
+			register_obs(&mote_addr, s);
+			list_add(res_list, s);
 			seq++;
 			
 			REST.set_response_status(response, REST.status.CREATED);
@@ -171,7 +169,7 @@ notification_callback(coap_observee_t *obs, void *notification,
 		remove_observation(obs, addr);
 		obs = NULL;
 		break;
-  }
+	}
 }
 
 static void update_payload(uip_ip6addr_t *addr, char *payload)
@@ -179,14 +177,13 @@ static void update_payload(uip_ip6addr_t *addr, char *payload)
 	proxying_res *s;
 	struct req *r;
 	
+	const char *i_vol = NULL;
+	const char *f_vol = NULL;
+	
 	for(s = list_head(res_list); s!=NULL; s = list_item_next(s))
 	{			
-		
-		
+	
 		if(uip_ipaddr_cmp(addr, &(s->obs->addr))){
-			
-			const char *i_vol = NULL;
-			const char *f_vol = NULL;
 			
 			i_vol = strstr(payload+8, ":'");
 			f_vol = strstr(i_vol+1, ".");
@@ -260,11 +257,10 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 	struct req *r;
 	int length;
 	
+	char uri[4];
 	char temp[80];
 	
 	int len = coap_get_header_uri_path(request, &url);
-	//REST.get_url(request, &url);
-	
 	
 	if(len == 0){
 		r = list_pop(request_list);	
@@ -274,12 +270,9 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 		
 		printf("OBSERVING NOTIFY: Uri: %s\n",s->uri->str);
 			
-		//sprintf(temp, "{\"e\":[{\"v\":\"%03d\",\"u\":\"%\"}, {\"v\":\"%03d\",\"u\":\"lat\"}, {\"v\":\"%03d\",\"u\":\"lon\"}],\"bn\":\"%03d%\"}", (int)s->volume, (int)s->latitude, (int)s->longitude, s->ID);
-		
+		memb_free(&request_allocator, (void *)r);
 	}	
-	else{
-		char uri[4];
-		
+	else{		
 		memcpy(uri,url, 4);
 		uri[3] = '\0';
 
@@ -293,13 +286,11 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 			}
 		}	
 	}
-	sprintf(temp, "{'%s': {'Volume':'%d.%ld', 'Lat':'%d.%ld', 'Lon':'%d.%ld'}}", s->uri->str, s->volume.i_part, s->volume.f_part, s->latitude.i_part, s->latitude.f_part, s->longitude.i_part, s->longitude.f_part, s->ID);
+	sprintf(temp, "{'%s': {'Volume':'%d.%ld', 'Lat':'%d.%ld', 'Lon':'%d.%ld'}}", s->uri->str, s->volume.i_part, s->volume.f_part, s->latitude.i_part, s->latitude.f_part, s->longitude.i_part, s->longitude.f_part);
 	
 	length = strlen(temp);
 			
 	memcpy(buffer, temp, length);
-				
-	memb_free(&request_allocator, (void *)r);
 
 	REST.set_header_content_type(response, REST.type.APPLICATION_JSON); 
 	REST.set_header_max_age(response, MAX_AGE);

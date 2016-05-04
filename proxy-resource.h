@@ -1,19 +1,15 @@
-#include "contiki.h"
-#include "contiki-net.h"
 #include "uip-debug.h"
 #include "string.h"
-#include <ctype.h>
 #include "stdlib.h"
-#include "rest-engine.h"
 #include "er-coap-engine.h"
-#include "er-coap.h"
+#include "rest-engine.h"
 #include "lib/list.h"
 #include "lib/memb.h"
 #include "lib/random.h"
 
 #define MAX_MOTES 			3
 #define MAX_STRING_LEN		30
-#define MAX_AGE 			600
+#define MAX_AGE 			90
 #define REMOTE_PORT     	UIP_HTONS(COAP_DEFAULT_PORT)
 #define OBS_RESOURCE_URI 	"dumpster" 
 

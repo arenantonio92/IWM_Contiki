@@ -6,6 +6,7 @@
 #include "rest-engine.h"
 #include "lib/random.h"
 #include "servreg-hack.h"
+#include "uip-debug.h"
 #include "dev/button-sensor.h"
 #include "er-coap-engine.h"
 
@@ -13,6 +14,9 @@
 
 #define RANDOM_MAX		 	65535
 #define SERVICE_ID      	190
+
+#define MIN_PERIOD 			800
+#define MAX_PERIOD			1800
 
 #define MIN_LAT		43.7
 #define MAX_LAT		43.72
@@ -45,7 +49,7 @@ res_per_get_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	
 	int i_part = (int)vol;
 	long int f_part = (long int)100*(vol-i_part);
-//
+
 	sprintf(jstring, "{'e':{'v':'%d.%ld','u':'%'}}", i_part, f_part);
 	length = strlen(jstring);
 	memcpy(buffer, jstring, length);
@@ -59,24 +63,17 @@ static void
 per_handler()
 {
   /* Do the update triggered by the event here, e.g., sampling a sensor. */
-	int i_part;
-	long int f_part; 
-
 	aux = (float)random_rand()/RANDOM_MAX;
 	/* aux=[0,1]*/
 	
-	if(aux>0.1)
-		;
-	else 
-		if((vol+aux*100) > 100)
+	if(aux<0.1){
+		if((vol+aux*100) > 100){
 			vol=100.0;
-	else 
-		vol+=aux*100;
-	
-	i_part = (int)vol;
-	f_part = (long int)100*(vol-i_part);
-	
-	//printf("Value: %d\n",per_value);
+		}
+		else{ 
+			vol+=aux*100;
+		}
+	}	
 
     /* Notify the registered observers which will trigger the tget_handler to create the response. */
     REST.notify_subscribers(&resource_per);
@@ -91,14 +88,8 @@ static uip_ipaddr_t *set_global_address(void)
   uint8_t state;
 
   uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
-  printf("First part addr: ");
-  uip_debug_ipaddr_print(&ipaddr);
-  printf("\n");
   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
-  printf("Final addr: ");
-  uip_debug_ipaddr_print(&ipaddr);
-  printf("\n");
 
   printf("IPv6 addresses: ");
   for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
@@ -138,16 +129,15 @@ AUTOSTART_PROCESSES(&server);
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(server, ev, data)
 {
-  uip_ipaddr_t *ipaddr;
-  servreg_hack_item_t *item;
-  static struct etimer wait_timer;
-  unsigned int WAIT_INTERVAL;
-  static char ip[40];
+	uip_ipaddr_t *ipaddr;
+	servreg_hack_item_t *item;
+	static struct etimer wait_timer;
+	unsigned int WAIT_INTERVAL;
+	static char ip[40];
   
-  unsigned int period ;
+	unsigned int period ;
   
-  static coap_packet_t request[1];
-	
+	static coap_packet_t request[1];
 	
 	static char id_string[80];
     int lat_i_part; 
@@ -155,14 +145,13 @@ PROCESS_THREAD(server, ev, data)
     int lon_i_part; 
 	long int lon_f_part;
 	
-  PROCESS_BEGIN();
+	PROCESS_BEGIN();
   
-  ipaddr = set_global_address();	
+	ipaddr = set_global_address();	
 	
-	
-  servreg_hack_init();
+	servreg_hack_init();
   
-  WAIT_INTERVAL = (unsigned int)randr(50,100)*CLOCK_SECOND;
+	WAIT_INTERVAL = (unsigned int)randr(50,100)*CLOCK_SECOND;
 	
 	/* GET PROXY ADDR */ 
 	item = servreg_hack_list_head();
@@ -186,19 +175,20 @@ PROCESS_THREAD(server, ev, data)
 		}
      }
 
-  period = randr(500,1500)*CLOCK_SECOND;  
+	period = (unsigned int)randr(MIN_PERIOD, MAX_PERIOD)*CLOCK_SECOND;  
 
-  periodic_resource_per.period = period;
+	periodic_resource_per.period = period;
   
-  SENSORS_ACTIVATE(button_sensor);
-  rest_init_engine();
-  rest_activate_resource(&resource_per, "dumpster");
+	SENSORS_ACTIVATE(button_sensor);
+	
+	rest_init_engine();
+	rest_activate_resource(&resource_per, "dumpster");
 	
 	lat = randr(MIN_LAT, MAX_LAT);
 	lon = randr(MIN_LON, MAX_LON);	
 	uip_debug_ipaddr_sprint(ip,ipaddr);
 	
-   /*faccio la post al proxy per annunciare il mio arrivo*/
+	/*faccio la post al proxy per annunciare il mio arrivo*/
 	coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
     coap_set_header_uri_path(request, "proxy_resource/");
 
@@ -216,14 +206,14 @@ PROCESS_THREAD(server, ev, data)
   
   
   
-  while(1) {
-    PROCESS_WAIT_EVENT();
-    if(ev == sensors_event && data == &button_sensor){
-    	//leds_toggle(LEDS_ALL);
-    	printf("Button pressed\n");
-    	vol = 0;
-    }
-  }
-  PROCESS_END();
+	while(1) {
+		PROCESS_WAIT_EVENT();
+		if(ev == sensors_event && data == &button_sensor){
+			printf("Button pressed\n");
+			vol = 0;
+		}
+	}
+	
+	PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
