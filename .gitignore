@@ -1,0 +1,16 @@
+obj_z1/
+contiki-z1.a
+proxy.z1
+symbols.c
+symbols.h
+01-EVENT/obj_z1/
+01-EVENT/contiki-z1.a
+01-EVENT/event-resource.z1
+01-EVENT/symbols.c
+01-EVENT/symbols.h
+rpl-border-router/obj_z1/
+rpl-border-router/border-router.z1
+rpl-border-router/contiki-z1.a
+rpl-border-router/contiki-z1.map
+rpl-border-router/symbols.c
+rpl-border-router/symbols.h

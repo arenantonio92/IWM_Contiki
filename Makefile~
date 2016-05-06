@@ -2,7 +2,7 @@ CONTIKI_PROJECT = proxy
 
 all: $(CONTIKI_PROJECT)
 
-#PROJECT_SOURCEFILES += proxy-resource.c
+PROJECT_SOURCEFILES += proxy-resource.c
 
 SMALL=1
 UIP_CONF_IPV6=1

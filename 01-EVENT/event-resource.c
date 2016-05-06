@@ -15,8 +15,8 @@
 #define RANDOM_MAX		 	65535
 #define SERVICE_ID      	190
 
-#define MIN_PERIOD 			800
-#define MAX_PERIOD			1800
+#define MIN_PERIOD 			50*CLOCK_SECOND
+#define MAX_PERIOD			120*CLOCK_SECOND
 
 #define MIN_LAT		43.7
 #define MAX_LAT		43.72
@@ -66,7 +66,7 @@ per_handler()
 	aux = (float)random_rand()/RANDOM_MAX;
 	/* aux=[0,1]*/
 	
-	if(aux<0.1){
+	if(aux<0.25){
 		if((vol+aux*100) > 100){
 			vol=100.0;
 		}
@@ -175,8 +175,10 @@ PROCESS_THREAD(server, ev, data)
 		}
      }
 
-	period = (unsigned int)randr(MIN_PERIOD, MAX_PERIOD)*CLOCK_SECOND;  
-
+	period = (unsigned int)randr(MIN_PERIOD, MAX_PERIOD);  
+	
+	printf("My period is equal to %u\n", period/CLOCK_SECOND);
+	
 	periodic_resource_per.period = period;
   
 	SENSORS_ACTIVATE(button_sensor);
