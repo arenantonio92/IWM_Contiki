@@ -312,9 +312,7 @@ static void update_payload(uip_ip6addr_t *addr, char *payload)
 	
 	const char *i_vol = NULL;
 	const char *f_vol = NULL;
-	
-	char allocate = 1;
-	
+
 	for(s = list_head(res_list); s!=NULL; s = list_item_next(s))
 	{			
 		if(uip_ipaddr_cmp(addr, &(s->obs->addr))){
@@ -326,20 +324,11 @@ static void update_payload(uip_ip6addr_t *addr, char *payload)
 			s->volume.f_part = atol(f_vol+1);
 			
 			s->counter++;
-			
-			for(r = list_head(request_list); r!=NULL; r = list_item_next(r)){
-				if(r->ID == s->ID){
-					allocate = 0;
-				}
-			}
-			
-			if(allocate == 1){
 				
-				r = (struct req *)memb_alloc(&request_allocator);
-				r->ID = s->ID;
+			r = (struct req *)memb_alloc(&request_allocator);
+			r->ID = s->ID;
 			
-				list_push(request_list, r);		
-			}
+			list_push(request_list, r);		
 		
 			REST.notify_subscribers(&s->res);
 			return;
