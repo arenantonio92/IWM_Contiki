@@ -80,7 +80,7 @@ uint32_t old_counters[MAX_MOTES];
 //Memory management allocator definition for proxy resources
 
 MEMB(memb_res_allocator, proxying_res, MAX_MOTES);
-MEMB(request_allocator, struct req, MAX_MOTES);
+MEMB(request_allocator, struct req, 2*MAX_MOTES);
 MEMB(string_allocator, struct string, MAX_MOTES);
 MEMB(uri_allocator, struct string, MAX_MOTES);
 
@@ -100,11 +100,7 @@ RESOURCE(proxy_res,
 		res_post_handler,
 		res_post_handler,
 		NULL);
-
-//Register a new observation
-static void 
-register_obs(uip_ip6addr_t *addr, proxying_res *p);
-
+		
 //Remove a specific observation relation and resource assiociated
 static void remove_observation(const char *addr);
 
@@ -158,12 +154,6 @@ static void res_post_handler(void *request, void *response,
 		uip_debug_ipaddr_print(&mote_addr);
 		printf("\n");
 		
-		i_lat = strstr(ip+1, ":'");
-		f_lat = strstr(i_lat+1, ".");
-		
-		i_lon = strstr(f_lat+1,":'");
-		f_lon = strstr(i_lon+1,".");
-			
 		for(s = list_head(res_list); s!=NULL; s = list_item_next(s))
 		{			
 			if(uip_ipaddr_cmp(&mote_addr, &(s->obs->addr))){
@@ -174,6 +164,9 @@ static void res_post_handler(void *request, void *response,
 			}	
 		}
 	}
+	
+	else
+		success = 0;
 	
 	if(success){
 		printf("New observation relation with mote %01x\n",seq);	
@@ -198,6 +191,13 @@ static void res_post_handler(void *request, void *response,
 			success = 0;
 		}
 		else{
+			
+			i_lat = strstr(ip+1, ":'");
+			f_lat = strstr(i_lat+1, ".");
+		
+			i_lon = strstr(f_lat+1,":'");
+			f_lon = strstr(i_lon+1,".");
+			
 			s->ID 	 	= seq;
 			s->counter	= 0;
 			s->attr  	= memb_alloc(&string_allocator);
@@ -212,7 +212,8 @@ static void res_post_handler(void *request, void *response,
 			//printf("lat:%03d.%07ld, long:%03d.%07ld\n", p->latitude.i_part, p->latitude.f_part, p->longitude.i_part, p->longitude.f_part);
 			
 			init_resource(s);
-			register_obs(&mote_addr, s);
+			s->obs = coap_obs_request_registration(&mote_addr, REMOTE_PORT,
+                        OBS_RESOURCE_URI, notification_callback, NULL);
 			list_add(res_list, s);
 			seq++;
 			
@@ -226,17 +227,11 @@ static void res_post_handler(void *request, void *response,
 }
 
 /* ------------ OBSERVING FUNCTION -------------------- */
-static void 
-register_obs(uip_ip6addr_t *addr, proxying_res *p)
-{
-	p->obs = coap_obs_request_registration(addr, REMOTE_PORT,
-                        OBS_RESOURCE_URI, notification_callback, NULL);
-}
 
 static void init_resource(proxying_res *p)
 {
 	
-	sprintf(p->attr->str, "title=\"%c%02d\";rt=\"Text\"", proxy_name, p->ID);
+	sprintf(p->attr->str, "title=\"%c%02d\";rt=\"Text\";obs", proxy_name, p->ID);
 	
 	//printf("Initizalizing Resource for mote %02d\n", p->ID);
 	
@@ -261,16 +256,12 @@ static void
 notification_callback(coap_observee_t *obs, void *notification,
                       coap_notification_flag_t flag)
 {
-	printf("Notification handler\n");
-	
 	int len = 0;
 	const uint8_t *payload = NULL;
 	char addr[MAX_STRING_LEN];
 	
 	uip_debug_ipaddr_sprint(addr, &(obs->addr));
 	printf("Observee addr: %s\n", addr);
-	printf("Observee URI: %s\n", obs->url);
-	
 		
 	if(notification){
 		len = coap_get_payload(notification, &payload);
@@ -349,7 +340,7 @@ static void remove_observation(const char *addr)
 			list_remove(restful_services_list, &s->res);
 			
 			list_remove(res_list, s);
-				
+
 			coap_obs_remove_observee(s->obs);
 				
 			memb_free(&string_allocator, (void *)s->attr);
@@ -364,7 +355,7 @@ static void remove_observation(const char *addr)
 
 static void event_handler()
 {
-	;
+	
 }
 	
 static void res_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -381,13 +372,12 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 	
 	if(len == 0){
 		r = list_pop(request_list);	
-			for(s = list_head(res_list); s!=NULL&&s->ID!=r->ID; s = list_item_next(s))
+		for(s = list_head(res_list); s!=NULL && s->ID!=r->ID; s = list_item_next(s))
 			;
 			
-			
-			printf("OBSERVING NOTIFY: Uri: %s\n",s->uri->str);
+		printf("OBSERVING NOTIFY: Uri: %s\n",s->uri->str);
 				
-			memb_free(&request_allocator, (void *)r);
+		memb_free(&request_allocator, (void *)r);
 
 	}	
 	else{		
@@ -404,6 +394,7 @@ static void res_get_handler(void* request, void* response, uint8_t *buffer, uint
 			}
 		}	
 	}
+	
 	sprintf(temp, "{'%s': {'Volume':'%d.%ld', 'Lat':'%d.%ld', 'Lon':'%d.%ld'}}", s->uri->str, s->volume.i_part, s->volume.f_part, s->latitude.i_part, s->latitude.f_part, s->longitude.i_part, s->longitude.f_part);
 	
 	length = strlen(temp);
@@ -469,7 +460,6 @@ PROCESS_THREAD(proxy_server_process, ev, data)
 	
 	rest_init_engine();
 	
-	printf("Activating proxy resource\n");
 	rest_activate_resource(&proxy_res, "proxy_resource");
 	
 	servreg_hack_register(SERVICE_ID, my_ip);

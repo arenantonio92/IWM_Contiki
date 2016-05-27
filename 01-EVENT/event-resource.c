@@ -16,13 +16,13 @@
 #define SERVICE_ID      	190
 
 #define MIN_PERIOD 			50*CLOCK_SECOND
-#define MAX_PERIOD			120*CLOCK_SECOND
+#define MAX_PERIOD			85*CLOCK_SECOND
 
-#define MIN_LAT		43.7
-#define MAX_LAT		43.72
+#define MIN_LAT				43.7
+#define MAX_LAT				43.72
 
-#define MIN_LON		10.387
-#define MAX_LON		10.482
+#define MIN_LON				10.387
+#define MAX_LON				10.482
 
 #define REMOTE_PORT     	UIP_HTONS(COAP_DEFAULT_PORT)
 
